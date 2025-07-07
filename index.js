@@ -12,48 +12,41 @@ const {
 } = process.env;
 
 if (!ROBLOX_GROUP_ID || !ROBLOX_API_KEY || !DISCORD_BOT_TOKEN || !DISCORD_CHANNEL_ID) {
-  console.error('Missing one or more required environment variables.');
+  console.error('Missing required environment variables!');
   process.exit(1);
 }
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages] });
 const LAST_LOG_ID_FILE = './last_log_id.txt';
 
-// Read last log ID from file or null
 function getLastLogId() {
   try {
-    const id = fs.readFileSync(LAST_LOG_ID_FILE, 'utf-8');
-    return id.trim();
+    return fs.readFileSync(LAST_LOG_ID_FILE, 'utf-8').trim();
   } catch {
     return null;
   }
 }
 
-// Save last log ID to file
 function setLastLogId(id) {
   fs.writeFileSync(LAST_LOG_ID_FILE, id, 'utf-8');
 }
 
-// Fetch recent audit logs from Roblox Group API
 async function fetchAuditLogs() {
   const url = `https://groups.roblox.com/v2/groups/${ROBLOX_GROUP_ID}/audit-logs?limit=25`;
   try {
-    const response = await fetch(url, {
-      headers: { 'x-api-key': ROBLOX_API_KEY },
-    });
-    if (!response.ok) {
-      console.error(`Roblox API error: ${response.status} ${response.statusText}`);
+    const res = await fetch(url, { headers: { 'x-api-key': ROBLOX_API_KEY } });
+    if (!res.ok) {
+      console.error(`Roblox API error: ${res.status} ${res.statusText}`);
       return [];
     }
-    const data = await response.json();
-    return data.data || [];
+    const json = await res.json();
+    return json.data || [];
   } catch (err) {
     console.error('Fetch error:', err);
     return [];
   }
 }
 
-// Format a log entry into a readable Discord message
 function formatLogEntry(log) {
   return `**${log.actionType}**
 By: **${log.responsible.username}** (UserId: ${log.responsible.userId})
@@ -72,19 +65,15 @@ async function mainLoop() {
 
   const logs = await fetchAuditLogs();
 
-  // Logs are usually ordered newest first
-  // We want to send only new logs newer than lastLogId
-  const newLogs = lastLogId
-    ? logs.filter(log => log.id > lastLogId)
-    : logs;
+  // Filter logs newer than lastLogId
+  const newLogs = lastLogId ? logs.filter(log => log.id > lastLogId) : logs;
 
   if (newLogs.length === 0) {
     console.log('No new audit logs.');
     return;
   }
 
-  // Send new logs oldest first to keep order
-  newLogs.reverse();
+  newLogs.reverse(); // Oldest first
 
   for (const log of newLogs) {
     try {
@@ -99,7 +88,6 @@ async function mainLoop() {
 
 client.once('ready', () => {
   console.log(`Logged in as ${client.user.tag}`);
-  // Run immediately, then at intervals
   mainLoop();
   setInterval(mainLoop, Number(POLL_INTERVAL_MS));
 });
