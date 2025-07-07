@@ -1,13 +1,11 @@
 {
-  "name": "roblox-audit-log-bot",
+  "name": "roblox-audit-logs-bot",
   "version": "1.0.0",
-  "description": "Discord bot that posts Roblox group audit logs",
+  "description": "A Discord bot that sends Roblox group audit logs using the Open Cloud API.",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
-  "author": "",
-  "license": "MIT",
   "dependencies": {
     "discord.js": "^14.11.0",
     "dotenv": "^16.3.1",
