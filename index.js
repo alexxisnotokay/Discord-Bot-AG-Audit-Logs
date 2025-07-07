@@ -12,7 +12,7 @@ const {
 } = process.env;
 
 if (!ROBLOX_GROUP_ID || !ROBLOX_API_KEY || !DISCORD_BOT_TOKEN || !DISCORD_CHANNEL_ID) {
-  console.error('Missing required environment variables!');
+  console.error('Missing required environment variables.');
   process.exit(1);
 }
 
@@ -34,7 +34,11 @@ function setLastLogId(id) {
 async function fetchAuditLogs() {
   const url = `https://groups.roblox.com/v2/groups/${ROBLOX_GROUP_ID}/audit-logs?limit=25`;
   try {
-    const res = await fetch(url, { headers: { 'x-api-key': ROBLOX_API_KEY } });
+    const res = await fetch(url, {
+      headers: {
+        'x-api-key': ROBLOX_API_KEY,
+      },
+    });
     if (!res.ok) {
       console.error(`Roblox API error: ${res.status} ${res.statusText}`);
       return [];
@@ -48,46 +52,45 @@ async function fetchAuditLogs() {
 }
 
 function formatLogEntry(log) {
-  return `**${log.actionType}**
-By: **${log.responsible.username}** (UserId: ${log.responsible.userId})
-At: <t:${Math.floor(new Date(log.created).getTime() / 1000)}:F>
-Details: ${log.description || 'No details provided.'}`;
+  return `📝 **${log.actionType}**
+👤 By: **${log.responsible.username}** (ID: ${log.responsible.userId})
+🕒 At: <t:${Math.floor(new Date(log.created).getTime() / 1000)}:F>
+🧾 Details: ${log.description || 'No details provided.'}`;
 }
 
 async function mainLoop() {
   const channel = await client.channels.fetch(DISCORD_CHANNEL_ID);
   if (!channel) {
-    console.error('Discord channel not found!');
+    console.error('Discord channel not found.');
     return;
   }
 
   let lastLogId = getLastLogId();
-
   const logs = await fetchAuditLogs();
 
-  // Filter logs newer than lastLogId
-  const newLogs = lastLogId ? logs.filter(log => log.id > lastLogId) : logs;
+  const newLogs = lastLogId
+    ? logs.filter(log => log.id > lastLogId)
+    : logs;
 
   if (newLogs.length === 0) {
     console.log('No new audit logs.');
     return;
   }
 
-  newLogs.reverse(); // Oldest first
+  newLogs.reverse();
 
   for (const log of newLogs) {
     try {
       await channel.send(formatLogEntry(log));
       setLastLogId(log.id);
-      lastLogId = log.id;
     } catch (err) {
-      console.error('Failed to send message:', err);
+      console.error('Failed to send message to Discord:', err);
     }
   }
 }
 
 client.once('ready', () => {
-  console.log(`Logged in as ${client.user.tag}`);
+  console.log(`✅ Logged in as ${client.user.tag}`);
   mainLoop();
   setInterval(mainLoop, Number(POLL_INTERVAL_MS));
 });
